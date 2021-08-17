@@ -9,6 +9,7 @@ import csv
 import logging
 import filepattern
 import skimage
+import cv2
 
 logger = logging.getLogger("evaluating")
 logger.setLevel(logging.INFO)
@@ -25,6 +26,21 @@ header = ['Image_Name','Class', 'TP', 'FP', 'FN', 'over_segmented', 'under_segme
 totalStats_header = ['Class', 'TP', 'FP', 'FN', 'over_segmented', 'under_segmented', 'IoU','sensitivity','precision','false negative rate',\
 		'false discovery rate','F-Scores (weighted) ','F1-Score/dice index','Fowlkes-Mallows Index']
 
+def ccl(img):
+	"""Runs connected component labeling function of opencv on input image.
+
+	Args:
+		img: input image
+
+	Returns:
+		labels: labeled file from a binary image.
+		num_labels: number of labels.
+		stats: other statistics.
+		centroids: centroids per label.
+	"""
+	(num_labels, labels, stats, centroids) = cv2.cv2.connectedComponentsWithStats(img)
+
+	return labels, num_labels, stats, centroids
 
 def get_image(im, tile_size, X, Y, x_max, y_max):
 	"""Get tiled images based on tile size and set all right and lower border cells to 0.
@@ -108,14 +124,14 @@ def find_over_under(dict_result, data):
 		over_segmented: number of over segmented cells.
 		under_segmented: number of under segmented cells.
 	"""
-	over_segmented = 0; under_segmented = 0
+	over_segmented_ = 0; under_segmented_ = 0
 	labels = {}
 	for key in dict_result: 
 		value = dict_result[key]
 		if len(value) == 1:
 			labels[key] = value[0]
 		if len(value) > 1:        
-			over_segmented+=1
+			over_segmented_+=1
 			data[key].append("over")
 
 	dict_new = {}
@@ -125,9 +141,9 @@ def find_over_under(dict_result, data):
 	for i in list(res):
 		for ind in i:
 			data[ind].append("under")
-			under_segmented+=1
+			under_segmented_+=1
 
-	return data, over_segmented, under_segmented
+	return data, over_segmented_, under_segmented_
 
 
 def evaluation(GTDir, PredDir, inputClasses, outDir, individualData, individualSummary, \
@@ -167,6 +183,8 @@ def evaluation(GTDir, PredDir, inputClasses, outDir, individualData, individualS
 		f_individualSummary = open(filename_individualSummary, 'w')
 		writer_individualSummary = csv.writer(f_individualSummary)
 		writer_individualSummary.writerow(header_individualSummary)
+		mean_centroid = [0] * (inputClasses+1)
+		mean_iou = [0] * (inputClasses+1)
 
 	if totalSummary:
 		total_iou = [0] * (inputClasses+1)
@@ -198,32 +216,31 @@ def evaluation(GTDir, PredDir, inputClasses, outDir, individualData, individualS
 						writer1 = csv.writer(f1)
 						writer1.writerow(header1)
 
-					for cl in range(1,inputClasses+1):
-						mean_centroid = 0
-						mean_iou = 0
-						totalCells = 0
-						fn = 0; tp = 0; fp = 0
-						for z in range(br_gt.Z):
-							# Loop across the length of the image
-							for y in range(0,br_gt.Y,tile_size):
-								y_max = min([br_gt.Y,y+tile_size])
-								for x in range(0,br_gt.X,tile_size):
-									x_max = min([br_gt.X,x+tile_size])
-									im_gt = np.squeeze(br_gt[y:y_max,x:x_max,z:z+1,0,0])
-									im_pred = np.squeeze(br_pred[y:y_max,x:x_max,z:z+1,0,0])
+					totalCells = [0] * (inputClasses+1)
+					tp =[0] * (inputClasses+1); fp = [0] * (inputClasses+1); fn = [0] *(inputClasses+1)
+					over_segmented = [0] * (inputClasses+1); under_segmented = [0] * (inputClasses+1)
+					for z in range(br_gt.Z):
+						# Loop across the length of the image
+						for y in range(0,br_gt.Y,tile_size):
+							y_max = min([br_gt.Y,y+tile_size])
+							for x in range(0,br_gt.X,tile_size):
+								x_max = min([br_gt.X,x+tile_size])
+								im_gt = np.squeeze(br_gt[y:y_max,x:x_max,z:z+1,0,0])
+								im_pred = np.squeeze(br_pred[y:y_max,x:x_max,z:z+1,0,0])
+
+								if inputClasses > 1:
+									classes = np.unique(im_gt)
+								else:
+									classes = [1]
+								for cl in classes:
+									if len(classes) >1:
+										im_pred = np.where(im_pred == cl, cl, 0)
+										im_gt = np.where(im_gt == cl, cl, 0)
+										im_pred,_,_,_ = ccl(np.uint8(im_pred))
+										im_gt,_,_,_ = ccl(np.uint8(im_gt))
 
 									im_gt = get_image(im_gt, tile_size, br_gt.X, br_gt.Y, x_max, y_max).astype(int)
 									im_pred = get_image(im_pred, tile_size, br_pred.X, br_pred.Y, x_max, y_max).astype(int)
-									
-									## save class values in a separate class array for predicted and ground truth image.
-									if inputClasses > 1:
-    									### labels are classes
-										classArray_pred = im_pred
-										classArray_gt = im_gt
-									else:
-    									### all labels belong to the same class
-										classArray_gt = (im_gt > 0).astype("uint8") * 1
-										classArray_pred = (im_pred > 0).astype("uint8") * 1
 
 									props = skimage.measure.regionprops(im_pred)
 									numLabels_pred = np.unique(im_pred)
@@ -247,8 +264,8 @@ def evaluation(GTDir, PredDir, inputClasses, outDir, individualData, individualS
 									dict_result = {}
 									data = [None]*(numLabels_gt.max()+1)
 
-									# import time
-									# start = time.time()
+									import time
+									start = time.time()
 
 									#### Slow from here
 									#### Calculate tp, fp, fn using nearest neighbor comparison
@@ -272,44 +289,36 @@ def evaluation(GTDir, PredDir, inputClasses, outDir, individualData, individualS
 										match = index[0]
 										dis = distance.flatten()[0]
 										componentMask_pred = (im_pred == numLabels_pred[match]).astype("uint8") * 1
-										mask_gt = np.where(componentMask_gt == 1, classArray_gt, 0)
-										mask_pred = np.where(componentMask_pred == 1, classArray_pred, 0)
 
 										intersection = np.logical_and(componentMask_pred, componentMask_gt)
 										union = np.logical_or(componentMask_pred, componentMask_gt)
 										iou_score_cell = np.sum(intersection) / np.sum(union)
 										
 										### divide diameter by 2 to get radius
-										if np.unique(mask_gt)[1] == cl:
-											if dis < (diameters[i]/2)*radiusFactor and match not in list_matches:
-												if np.unique(mask_gt)[1] == np.unique(mask_pred)[1] and iou_score_cell > 0.5:
-													tp+=1
-													list_matches.append(match)
-													condition = "TP"
-													im_pred = np.where(im_pred==numLabels_pred[match], 0, im_pred)
-													centroids_pred[match] = ([0.0,0.0])
-													totalCells+=1
-												else:
-													fn+=1
-													condition = "FN"
-											else:
-												fn+=1
-												condition = "FN"
+										if dis < (diameters[i]/2)*radiusFactor and match not in list_matches and iou_score_cell > 0.5:
+												tp[cl]+=1
+												list_matches.append(match)
+												condition = "TP"
+												im_pred = np.where(im_pred==numLabels_pred[match], 0, im_pred)
+												centroids_pred[match] = ([0.0,0.0])
+												totalCells[cl]+=1
+										else:
+											fn[cl]+=1
+											condition = "FN"
 
-											if condition == "TP":
-												mean_centroid+=dis
-												mean_iou+=iou_score_cell
+										if condition == "TP":
+											mean_centroid[cl]+=dis
+											mean_iou[cl]+=iou_score_cell
 
-											data[numLabels_gt[i]] = [dis, cl, iou_score_cell,numLabels_gt[i], dict_result.get(numLabels_gt[i]), condition]
+										data[numLabels_gt[i]] = [dis, cl, iou_score_cell,numLabels_gt[i], dict_result.get(numLabels_gt[i]), condition]
 									### Slow till here
+									end = time.time()
+									print(end-start)
 
-									data, over_segmented, under_segmented = find_over_under(dict_result, data)
-									total_over_segmented[cl]+=over_segmented
-									total_under_segmented[cl]+=under_segmented
-									# end = time.time()
-									# print(end-start)
-
-
+									data, over_segmented_, under_segmented_ = find_over_under(dict_result, data)
+									over_segmented[cl]+=over_segmented_
+									under_segmented[cl]+=under_segmented_
+									
 									if individualData:
 										for i in range(0, numLabels_gt.max()+1):
 											if data[i] is not None:
@@ -319,17 +328,15 @@ def evaluation(GTDir, PredDir, inputClasses, outDir, individualData, individualS
 									for i in range(1,len(centroids_pred)):
 										if centroids_pred[i][0] != 0.0 and centroids_pred[i][1] != 0.0:
 											componentMask_pred = (im_pred == numLabels_pred[i]).astype("uint8") * 1
-											mask_pred = np.where(componentMask_pred == 1, classArray_pred, 0)
 											if np.where(componentMask_pred > 0)[0].size > 2:
-												if np.unique(mask_pred)[1] == cl:
-													fp+=1
+												fp[cl]+=1
 
-						# print(tp, fp, fn, over_segmented, under_segmented)
-						iou, tpr, precision, fnr, fdr, fscore, f1_score, fmi = metrics(tp, fp, fn)
-						data_result = [file_name.name, cl, tp, fp, fn, over_segmented, under_segmented,\
+					# print(tp, fp, fn, over_segmented, under_segmented)
+					for cl in range(1, inputClasses+1):
+						iou, tpr, precision, fnr, fdr, fscore, f1_score, fmi = metrics(tp[cl], fp[cl], fn[cl])
+						data_result = [file_name.name, cl, tp[cl], fp[cl], fn[cl], over_segmented[cl], under_segmented[cl],\
 							 iou, tpr, precision, fnr,fdr,fscore,f1_score,fmi]
 						writer.writerow(data_result)
-
 						if totalSummary:
 							total_iou[cl]+=iou
 							total_tpr[cl]+=tpr 
@@ -341,21 +348,24 @@ def evaluation(GTDir, PredDir, inputClasses, outDir, individualData, individualS
 							total_fmi[cl]+=fmi
 
 						if totalStats:
-							TP[cl]+=tp
-							FP[cl]+=fp
-							FN[cl]+=fn
+							TP[cl]+=tp[cl]
+							FP[cl]+=fp[cl]
+							FN[cl]+=fn[cl]
+							total_over_segmented[cl]+=over_segmented[cl]
+							total_under_segmented[cl]+=under_segmented[cl]
 
-						if individualSummary:
-							mean_centroid = mean_centroid/totalCells
-							mean_iou = mean_iou/totalCells
-							data_individualSummary = [file_name.name, cl, mean_centroid, mean_iou]
+
+					if individualSummary:
+						for cl in range(1, inputClasses+1):
+							mean_centroid[cl] = mean_centroid[cl]/totalCells[cl]
+							mean_iou[cl] = mean_iou[cl]/totalCells[cl]
+							data_individualSummary = [file_name.name, cl, mean_centroid[cl], mean_iou[cl]]
 							writer_individualSummary.writerow(data_individualSummary)
 
 					if individualData:
 						f1.close()
 		f_individualSummary.close()
 		f.close()
-		
 
 		if totalSummary:
 			totalSummary_header =  ['Class','Average IoU','Average sensitivity','Average precision','Average false negative rate',\
