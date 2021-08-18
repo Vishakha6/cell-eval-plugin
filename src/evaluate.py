@@ -277,7 +277,7 @@ def evaluation(GTDir, PredDir, inputClasses, outDir, individualData, individualS
 										dict_result.setdefault(numLabels_gt[i], [])
 										for idx in index:
 											componentMask_pred_ = (im_pred == numLabels_pred[idx]).astype("uint8") * 1
-											if np.where(componentMask_pred_ > 0)[0].size > 2 and idx != 0:
+											if (componentMask_pred_ > 0).sum() >2 and idx != 0:
 												if componentMask_gt[int(centroids_pred[idx][1]), int(centroids_pred[idx][0])] == 1 \
 													or componentMask_pred_[int(centroids_gt[i][1]), int(centroids_gt[i][0])] == 1:
 													dict_result[numLabels_gt[i]].append(numLabels_pred[idx])
@@ -299,7 +299,6 @@ def evaluation(GTDir, PredDir, inputClasses, outDir, individualData, individualS
 												tp[cl]+=1
 												list_matches.append(match)
 												condition = "TP"
-												im_pred = np.where(im_pred==numLabels_pred[match], 0, im_pred)
 												centroids_pred[match] = ([0.0,0.0])
 												totalCells[cl]+=1
 										else:
@@ -311,6 +310,7 @@ def evaluation(GTDir, PredDir, inputClasses, outDir, individualData, individualS
 											mean_iou[cl]+=iou_score_cell
 
 										data[numLabels_gt[i]] = [dis, cl, iou_score_cell,numLabels_gt[i], dict_result.get(numLabels_gt[i]), condition]
+
 									### Slow till here
 									end = time.time()
 									print(end-start)
@@ -324,14 +324,13 @@ def evaluation(GTDir, PredDir, inputClasses, outDir, individualData, individualS
 											if data[i] is not None:
 												writer1.writerow(data[i])
 
-									## calculate false positives.
+									# ## calculate false positives.
 									for i in range(1,len(centroids_pred)):
 										if centroids_pred[i][0] != 0.0 and centroids_pred[i][1] != 0.0:
 											componentMask_pred = (im_pred == numLabels_pred[i]).astype("uint8") * 1
-											if np.where(componentMask_pred > 0)[0].size > 2:
+											if (componentMask_pred > 0).sum() >2:
 												fp[cl]+=1
 
-					# print(tp, fp, fn, over_segmented, under_segmented)
 					for cl in range(1, inputClasses+1):
 						iou, tpr, precision, fnr, fdr, fscore, f1_score, fmi = metrics(tp[cl], fp[cl], fn[cl])
 						data_result = [file_name.name, cl, tp[cl], fp[cl], fn[cl], over_segmented[cl], under_segmented[cl],\
