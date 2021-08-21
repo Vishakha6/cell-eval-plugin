@@ -147,7 +147,7 @@ def find_over_under(dict_result, data):
 
 
 def evaluation(GTDir, PredDir, inputClasses, outDir, individualData, individualSummary, \
-	totalStats, totalSummary, spatial_resolution_xy, radiusFactor, filePattern):
+	totalStats, totalSummary, radiusFactor, filePattern):
 	"""Main function to Read input files and save results based on user input.
 
 	Args:
@@ -159,7 +159,6 @@ def evaluation(GTDir, PredDir, inputClasses, outDir, individualData, individualS
 		individualSummary: Boolean to calculate summary of individual images.
 		totalStats: Boolean to calculate overall statistics across all images.
 		totalSummary: Boolean to calculate summary across all images.
-		spatial_resolution_xy: Spatial resolution of image (in mm).
 		radiusFactor: Importance of radius/diameter to find centroid distance. Should be between (0,2].
 		filePattern: Filename pattern to filter data.
 	"""
@@ -171,6 +170,7 @@ def evaluation(GTDir, PredDir, inputClasses, outDir, individualData, individualS
 	f = open(filename, 'w')
 	writer = csv.writer(f)
 	writer.writerow(header)
+	total_files = 0
 
 	if totalStats:
 		TP =[0] * (inputClasses+1); FP = [0] * (inputClasses+1); FN = [0] *(inputClasses+1)
@@ -195,7 +195,6 @@ def evaluation(GTDir, PredDir, inputClasses, outDir, individualData, individualS
 		total_fscore = [0] * (inputClasses+1)
 		total_f1_score = [0] * (inputClasses+1)
 		total_fmi = [0] * (inputClasses+1)
-		total_files = 0
 
 	try:
 		for fP in fp():
@@ -264,8 +263,8 @@ def evaluation(GTDir, PredDir, inputClasses, outDir, individualData, individualS
 									dict_result = {}
 									data = [None]*(numLabels_gt.max()+1)
 
-									import time
-									start = time.time()
+									# import time
+									# start = time.time()
 
 									#### Slow from here
 									#### Calculate tp, fp, fn using nearest neighbor comparison
@@ -305,15 +304,15 @@ def evaluation(GTDir, PredDir, inputClasses, outDir, individualData, individualS
 											fn[cl]+=1
 											condition = "FN"
 
-										if condition == "TP":
+										if condition == "TP" and individualSummary:
 											mean_centroid[cl]+=dis
 											mean_iou[cl]+=iou_score_cell
 
 										data[numLabels_gt[i]] = [dis, cl, iou_score_cell,numLabels_gt[i], dict_result.get(numLabels_gt[i]), condition]
 
-									### Slow till here
-									end = time.time()
-									print(end-start)
+									# ### Slow till here
+									# end = time.time()
+									# print(end-start)
 
 									data, over_segmented_, under_segmented_ = find_over_under(dict_result, data)
 									over_segmented[cl]+=over_segmented_
@@ -363,13 +362,14 @@ def evaluation(GTDir, PredDir, inputClasses, outDir, individualData, individualS
 
 					if individualData:
 						f1.close()
-		f_individualSummary.close()
+		if individualSummary:
+			f_individualSummary.close()
 		f.close()
 
 		if totalSummary:
 			totalSummary_header =  ['Class','Average IoU','Average sensitivity','Average precision','Average false negative rate',\
 			'Average false discovery rate','Average F-Scores (weighted) ','Average F1-Score/dice index','Average Fowlkes-Mallows Index']
-			summary_file = str(Path(outDir)/"total_summary.csv")
+			summary_file = str(Path(outDir)/"average_summary.csv")
 			f_totalSummary = open(summary_file, 'w')
 			writer_totalSummary = csv.writer(f_totalSummary)
 			writer_totalSummary.writerow(totalSummary_header)
