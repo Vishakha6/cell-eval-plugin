@@ -15,18 +15,17 @@ If WIPP is running, navigate to the plugins page and add a new plugin. Paste the
 
 ## Options
 
-This plugin takes ten input arguments and one output argument:
+This plugin takes nine input arguments and one output argument:
 
 | Name          | Description             | I/O    | Type   |
 |---------------|-------------------------|--------|--------|
 | `--GTDir` | Ground truth input image collection to be processed by this plugin | Input | collection |
 | `--PredDir` | Predicted input image collection to be processed by this plugin | Input | collection |
 | `--inputClasses` | Number of classes | Input | number |
-| `--individualData` | Boolean to calculate individual image statistics. | Input | boolean |
-| `--individualSummary` | Boolean to calculate summary of individual images. | Input | boolean |
-| `--totalStats` | Boolean to calculate overall statistics across all images. | Input | boolean |
-| `--totalSummary` | Boolean to calculate summary across all images. | Input | boolean |
-| `--spatialResolution` | Spatial resolution of image (in mm). | Input | float |
-| `--radiusFactor` | Importance of radius/diameter to find centroid distance. Should be between (0,2]. | Input | float |
+| `--individualData` | Boolean to calculate individual image statistics. Default is false. | Input | boolean |
+| `--individualSummary` | Boolean to calculate summary of individual images. Default is false. | Input | boolean |
+| `--totalStats` | Boolean to calculate overall statistics across all images. Default is false. | Input | boolean |
+| `--totalSummary` | Boolean to calculate summary across all images. Default is false. | Input | boolean |
+| `--radiusFactor` | Importance of radius/diameter to find centroid distance. Should be between (0,2]. | Input | str |
 | `--filePattern` | Filename pattern to filter data. | Input | str |
-| `--outDir` | Output collection | Output | genericData |
+| `--outDir` | Output collection | Output | csvCollection |

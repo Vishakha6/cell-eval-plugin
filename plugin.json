@@ -1,6 +1,6 @@
 {
     "name": "Cellular Evaluation Plugin",
-    "version": "0.1.2",
+    "version": "0.1.5",
     "title": "Cellular Evaluation Plugin",
     "description": "Plugin to generate evaluation metrics for region-wise comparison of ground truth and predicted images.",
     "author": "Vishakha Goyal (vishakha.goyal@nih.gov)",
@@ -8,7 +8,7 @@
     "repository": "https://github.com/labshare/polus-plugins",
     "website": "https://ncats.nih.gov/preclinical/core/informatics",
     "citation": "",
-    "containerId": "polusai/cellular-eval-plugin:0.1.2",
+    "containerId": "polusai/cellular-eval-plugin:0.1.5",
     "inputs": [
       {
         "name": "GTDir",
@@ -31,36 +31,30 @@
       {
         "name": "individualData",
         "type": "boolean",
-        "description": "Boolean to calculate individual image statistics.",
+        "description": "Boolean to calculate individual image statistics.Default is false.",
         "required": false
       },
       {
         "name": "individualSummary",
         "type": "boolean",
-        "description": "Boolean to calculate summary of individual images.",
+        "description": "Boolean to calculate summary of individual images.Default is false.",
         "required": false
       },
       {
         "name": "totalStats",
         "type": "boolean",
-        "description": "Boolean to calculate overall statistics across all images.",
+        "description": "Boolean to calculate overall statistics across all images.Default is false.",
         "required": false
       },
       {
         "name": "totalSummary",
         "type": "boolean",
-        "description": "Boolean to calculate summary across all images.",
-        "required": false
-      },
-      {
-        "name": "spatialResolution",
-        "type": "float",
-        "description": "Spatial resolution of image (in mm).",
+        "description": "Boolean to calculate summary across all images.Default is false.",
         "required": false
       },
       {
         "name": "radiusFactor",
-        "type": "float",
+        "type": "str",
         "description": "Importance of radius/diameter to find centroid distance. Should be between (0,2].",
         "required": false
       },
@@ -74,7 +68,7 @@
     "outputs": [
       {
         "name": "outDir",
-        "type": "genericData",
+        "type": "csvCollection",
         "description": "Output collection"
       }
     ],
@@ -97,27 +91,22 @@
       {
         "key": "inputs.individualData",
         "title": "Individual Image Data",
-        "description": "Boolean to calculate individual image statistics."
+        "description": "Boolean to calculate individual image statistics.Default is false."
       },
       {
         "key": "inputs.individualSummary",
         "title": "Individual Image Summary",
-        "description": "Boolean to calculate summary of individual images."
+        "description": "Boolean to calculate summary of individual images.Default is false."
       },
       {
         "key": "inputs.totalStats",
         "title": "Total Statistics",
-        "description": "Boolean to calculate overall statistics across all images."
+        "description": "Boolean to calculate overall statistics across all images.Default is false."
       },
       {
         "key": "inputs.totalSummary",
         "title": "Summary for all Images",
-        "description": "Boolean to calculate summary across all images."
-      },
-      {
-        "key": "inputs.spatialResolution",
-        "title": "Spatial Resolution",
-        "description": "Spatial resolution of image (in mm)."
+        "description": "Boolean to calculate summary across all images.Default is false."
       },
       {
         "key": "inputs.radiusFactor",

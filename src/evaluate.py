@@ -252,6 +252,9 @@ def evaluation(GTDir, PredDir, inputClasses, outDir, individualData, individualS
 									list_matches = []
 									props = skimage.measure.regionprops(im_gt)
 									numLabels_gt = np.unique(im_gt)
+
+									if numLabels_gt[0] != 0:
+										numLabels_gt = np.insert(numLabels_gt, 0, 0)
 									centroids_gt = np.zeros((len(numLabels_gt),2))
 									diameters = np.zeros((len(numLabels_gt)))
 									i = 1
@@ -262,13 +265,16 @@ def evaluation(GTDir, PredDir, inputClasses, outDir, individualData, individualS
 
 									dict_result = {}
 									data = [None]*(numLabels_gt.max()+1)
-
 									# import time
 									# start = time.time()
 
 									#### Slow from here
 									#### Calculate tp, fp, fn using nearest neighbor comparison
-									nbrs = NearestNeighbors(n_neighbors=5, algorithm='ball_tree').fit(centroids_pred)
+									if len(centroids_pred) > 4:
+										numberofNeighbors = 5
+									else:
+										numberofNeighbors = len(centroids_pred)
+									nbrs = NearestNeighbors(n_neighbors=numberofNeighbors, algorithm='ball_tree').fit(centroids_pred)
 									for i in range(1,len(centroids_gt)):
 										distance, index = nbrs.kneighbors(np.array([centroids_gt[i]]))
 										index = index.flatten()
@@ -329,8 +335,10 @@ def evaluation(GTDir, PredDir, inputClasses, outDir, individualData, individualS
 											componentMask_pred = (im_pred == numLabels_pred[i]).astype("uint8") * 1
 											if (componentMask_pred > 0).sum() >2:
 												fp[cl]+=1
-
+#					print(tp[cl], fp[cl], fn[cl])
 					for cl in range(1, inputClasses+1):
+						if tp[cl] == 0:
+							continue
 						iou, tpr, precision, fnr, fdr, fscore, f1_score, fmi = metrics(tp[cl], fp[cl], fn[cl])
 						data_result = [file_name.name, cl, tp[cl], fp[cl], fn[cl], over_segmented[cl], under_segmented[cl],\
 							 iou, tpr, precision, fnr,fdr,fscore,f1_score,fmi]
@@ -355,6 +363,8 @@ def evaluation(GTDir, PredDir, inputClasses, outDir, individualData, individualS
 
 					if individualSummary:
 						for cl in range(1, inputClasses+1):
+							if totalCells[cl] == 0:
+								continue
 							mean_centroid[cl] = mean_centroid[cl]/totalCells[cl]
 							mean_iou[cl] = mean_iou[cl]/totalCells[cl]
 							data_individualSummary = [file_name.name, cl, mean_centroid[cl], mean_iou[cl]]
@@ -366,7 +376,7 @@ def evaluation(GTDir, PredDir, inputClasses, outDir, individualData, individualS
 			f_individualSummary.close()
 		f.close()
 
-		if totalSummary:
+		if totalSummary and total_files != 0:
 			totalSummary_header =  ['Class','Average IoU','Average sensitivity','Average precision','Average false negative rate',\
 			'Average false discovery rate','Average F-Scores (weighted) ','Average F1-Score/dice index','Average Fowlkes-Mallows Index']
 			summary_file = str(Path(outDir)/"average_summary.csv")
@@ -393,6 +403,8 @@ def evaluation(GTDir, PredDir, inputClasses, outDir, individualData, individualS
 			writer2 = csv.writer(f2)
 			writer2.writerow(totalStats_header)
 			for cl in range(1,inputClasses+1):
+				if TP[cl] == 0:
+					continue
 				iou, tpr, precision, fnr,fdr,fscore,f1_score,fmi = metrics(TP[cl], FP[cl], FN[cl])
 				data_totalStats = [cl, TP[cl], FP[cl], FN[cl], total_over_segmented[cl], total_under_segmented[cl],\
 					 iou, tpr, precision, fnr,fdr,fscore,f1_score,fmi]
