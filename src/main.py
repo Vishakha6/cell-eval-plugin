@@ -27,7 +27,9 @@ if __name__=="__main__":
     parser.add_argument('--totalSummary', dest='totalSummary', type=str, default="false",
                         help='Boolean to calculate summary across all images. Default is false.', required=False)
     parser.add_argument('--radiusFactor', dest='radiusFactor', type=str, default = 0.5,
-                        help='Importance of radius/diameter to find centroid distance. Should be between (0,2].', required=False)
+                        help='Importance of radius/diameter to find centroid distance. Should be between (0,2].Default is 0.5.', required=False)
+    parser.add_argument('--iouScore', dest='iouScore', type=str, default = 0,
+                        help='IoU theshold. Default is 0.', required=False)
     parser.add_argument('--filePattern', dest='filePattern', type=str,
                         help='Filename pattern to filter data.', required=True)
 
@@ -53,6 +55,8 @@ if __name__=="__main__":
     logger.info('totalSummary = {}'.format(totalSummary))
     radiusFactor = float(args.radiusFactor)
     logger.info('radiusFactor = {}'.format(radiusFactor))
+    iouScore = float(args.iouScore)
+    logger.info('iouScore = {}'.format(iouScore))
     filePattern = args.filePattern
     logger.info('filePattern = {}'.format(filePattern))
     
@@ -60,4 +64,4 @@ if __name__=="__main__":
     logger.info('outDir = {}'.format(outDir))
 
     evaluation(GTDir, PredDir,inputClasses, outDir,individualData, individualSummary, \
-        totalStats, totalSummary, radiusFactor,filePattern)
+        totalStats, totalSummary, radiusFactor,iouScore,filePattern)
