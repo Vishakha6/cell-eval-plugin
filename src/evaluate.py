@@ -315,7 +315,6 @@ def evaluation(GTDir, PredDir, inputClasses, outDir, individualData, individualS
 											fn[cl]+=1
 											condition = "FN"
 
-										all_cells+=1
 
 										if condition == "TP" and individualSummary:
 											mean_centroid[cl]+=dis
