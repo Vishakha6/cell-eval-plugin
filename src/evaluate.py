@@ -341,8 +341,9 @@ def evaluation(GTDir, PredDir, inputClasses, outDir, individualData, individualS
 #					print(tp[cl], fp[cl], fn[cl])
 					for cl in range(1, inputClasses+1):
 						if tp[cl] == 0:
-							tp[cl] = 1e-20
-						iou, tpr, precision, fnr, fdr, fscore, f1_score, fmi = metrics(tp[cl], fp[cl], fn[cl])
+							iou, tpr, precision, fnr, fdr, fscore, f1_score, fmi = metrics(1e-20, fp[cl], fn[cl])
+						else:
+							iou, tpr, precision, fnr, fdr, fscore, f1_score, fmi = metrics(tp[cl], fp[cl], fn[cl])
 						data_result = [file_name.name, cl, tp[cl], fp[cl], fn[cl], over_segmented[cl], under_segmented[cl],\
 							 iou, tpr, precision, fnr,fdr,fscore,f1_score,fmi]
 						writer.writerow(data_result)
@@ -408,8 +409,9 @@ def evaluation(GTDir, PredDir, inputClasses, outDir, individualData, individualS
 			writer2.writerow(totalStats_header)
 			for cl in range(1,inputClasses+1):
 				if TP[cl] == 0:
-					TP[cl] = 1e-20
-				iou, tpr, precision, fnr,fdr,fscore,f1_score,fmi = metrics(TP[cl], FP[cl], FN[cl])
+					iou, tpr, precision, fnr,fdr,fscore,f1_score,fmi = metrics(1e-20, FP[cl], FN[cl])
+				else:
+					iou, tpr, precision, fnr,fdr,fscore,f1_score,fmi = metrics(TP[cl], FP[cl], FN[cl])
 				data_totalStats = [cl, TP[cl], FP[cl], FN[cl], total_over_segmented[cl], total_under_segmented[cl],\
 					 iou, tpr, precision, fnr,fdr,fscore,f1_score,fmi]
 				writer2.writerow(data_totalStats)
